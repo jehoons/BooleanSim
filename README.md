@@ -13,7 +13,7 @@ Ply can be downloaded from following link:
 http://www.dabeaz.com/ply/
 
 Test code: 
-```
+```python
 import pickle 
 from pdb import set_trace
 from boolean3 import Model
