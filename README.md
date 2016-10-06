@@ -1,5 +1,13 @@
 # BooleanSim
 
+### INSTALL 
+```
+git clone git@github.com:jehoons/BooleanSim.git
+cd BooleanSim 
+python setup.py install 
+```
+
+### ORIGINAL CODE
 Original code of `boolean2` module is developed by Albert. Original code can be downloaded by following command:
 
 ```
@@ -11,6 +19,8 @@ As original code is excuted only from `python2`, I translated the code by using 
 Ply can be downloaded from following link:
 
 http://www.dabeaz.com/ply/
+
+### TEST
 
 Test code: 
 ```python
