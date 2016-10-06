@@ -1,4 +1,4 @@
-# boolean3
+# BooleanSim
 
 Original code of `boolean2` module is developed by Albert. Original code can be downloaded by following command:
 
