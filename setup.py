@@ -5,13 +5,13 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
-    name = "MyBooleanNetSimul",
-    version = "0.0.4",
+    name = "BooleanSim",
+    version = "0.1",
     author = "Je-Hoon Song",
     author_email = "song.jehoon@gmail.com",
-    description = ( "BooleanNetwork Simulator"),
+    description = ( "A simulator for boolean network"),
     license = "BSD",
-    keywords = "example documentation tutorial",
+    keywords = "boolean network simulator",
     url = "",
     packages=['boolean3', 'boolean3_addon'],
     long_description=read('README.md'),
