@@ -15,14 +15,15 @@ from boolean3_addon import progressbar
 import json
 
 
-def find_attractors(model=None, steps=30, mode='sync', sample_size=1000):
+def find_attractors(model=None, steps=30, mode='sync', sample_size=1000, show_progress=True):
 
     simulation_data = { }
     fingerprint_mapping = { }
     seen = { }
 
     for i in range(sample_size):
-        progressbar.update(i, sample_size)
+        if show_progress: 
+            progressbar.update(i, sample_size)
 
         model.initialize()
         model.iterate( steps=steps )
