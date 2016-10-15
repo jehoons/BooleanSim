@@ -151,14 +151,32 @@ def gencode(text):
     init_tokens = tokenizer.init_tokens(tokens)
     update_tokens = tokenizer.update_tokens(tokens)
 
+    ic_nodes = [] 
+    for it in init_tokens:
+        ic_nodes.append( it[0].value )
+
+    update_nodes = [] 
+    for it in update_tokens:
+        update_nodes.append( it[0].value )        
+
+    # print(node_list)
+    # print(ic_nodes)
+    # print(update_nodes)    
+
+    # set_trace()
+
     output_str = ''
     output_str += 'DEF num_nodes = %d\n' % len(node_list)
     output_str += 'ctypedef int (*cfptr)(int*)\n' 
     output_str += 'cdef cfptr eqlist[num_nodes]\n\n'
 
+    remainer_node_ids = [i for i in range(0, len(node_list))]
+
     for it in update_tokens: 
         strout = '' 
         idx = node_list.index( it[0].value ) 
+        # node_list_copy.remove(it[0].value)
+        remainer_node_ids.remove(idx)
         for i,el in enumerate(it): 
             if el.type=='ID':
                 if i==0:
@@ -181,6 +199,11 @@ def gencode(text):
         output_str += '    %s\n' % strout
         output_str += '    return state_%d\n\n' % idx
 
+    for idx in remainer_node_ids:
+        output_str += 'cdef int __bool_fcn_%d(int state[]):\n' % idx
+        output_str += '    state_%d = state[%d]\n' % (idx, idx)
+        output_str += '    return state_%d\n\n' % idx
+
     for i in range(len(node_list)): 
         output_str+= 'eqlist[%d] = &__bool_fcn_%d\n' % (i,i)
 
@@ -189,6 +212,7 @@ def gencode(text):
 
     output_str+='def simulate(steps=10):\n'
 
+    # initial_values 
     for it in init_tokens: 
         strout = '' 
         idx = node_list.index( it[0].value ) 
@@ -230,3 +254,5 @@ def build(text):
 def run(samples=10, steps=10, debug=True): 
     import engine
     return engine.main(samples=samples, steps=steps, debug=debug)
+
+
