@@ -243,16 +243,18 @@ def gencode(text):
 
 def build(text):
     modelcode, node_list = gencode(text)
-    
     result = tempcode.replace('$MODELCODE$', modelcode)
     result = result.replace('$LABELS$', repr(node_list))
-
     with open('engine.pyx', 'w') as f:
         f.write(result)
     import pyximport; pyximport.install()
 
 def run(samples=10, steps=10, debug=True): 
     import engine
-    return engine.main(samples=samples, steps=steps, debug=debug)
+    result = engine.main(samples=samples, steps=steps, debug=debug)
+    result['parameters'] = {
+        'samples': samples,
+        'steps': steps
+        }
 
-
+    return result
