@@ -142,7 +142,7 @@ def main(steps=30, samples=100, debug=False):
     return result
 """
 
-def gencode(text, on_list=[], off_list=[]):
+def gencode(text, on_states, off_states):
 
     lexer = tokenizer.Lexer() 
     tokens = lexer.tokenize_text( text )
@@ -204,20 +204,20 @@ def gencode(text, on_list=[], off_list=[]):
         output_str += '    state_%d = state[%d]\n' % (idx, idx)
         output_str += '    return state_%d\n\n' % idx
 
-    output_str += 'cdef int __fixed_on():\n'
+    output_str += 'cdef int __fixed_on(int state[]):\n'
     output_str += '    return True\n\n'
-    output_str += 'cdef int __fixed_off():\n'
+    output_str += 'cdef int __fixed_off(int state[]):\n'
     output_str += '    return False\n\n'
 
     for i in range(len(node_list)): 
-        if node_list[i] in on_list:
-            output_str+= 'eqlist[%d] = &__fixed_on'
-        elif node_list[i] in off_list: 
-            output_str+= 'eqlist[%d] = &__fixed_off'
+        if node_list[i] in on_states:
+            output_str+= 'eqlist[%d] = &__fixed_on\n' % (i) 
+        elif node_list[i] in off_states: 
+            output_str+= 'eqlist[%d] = &__fixed_off\n' % (i) 
         else: 
             output_str+= 'eqlist[%d] = &__bool_fcn_%d\n' % (i,i)
 
-    output_str+='cdef int state0[num_nodes]\n'
+    output_str+='\ncdef int state0[num_nodes]\n'
     output_str+='cdef int state1[num_nodes]\n\n'
 
     output_str+='def simulate(steps=10):\n'
@@ -251,8 +251,8 @@ def gencode(text, on_list=[], off_list=[]):
     
     return output_str, node_list
 
-def build(text):
-    modelcode, node_list = gencode(text)
+def build(text, on_states=[], off_states=[]):
+    modelcode, node_list = gencode(text, on_states, off_states)
     result = tempcode.replace('$MODELCODE$', modelcode)
     result = result.replace('$LABELS$', repr(node_list))
     with open('engine.pyx', 'w') as f:
