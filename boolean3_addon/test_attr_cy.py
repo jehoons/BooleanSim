@@ -10,9 +10,9 @@ def test_this():
     B*= A and C
     C*= not A or B
     '''
+    attr_cy.build(text)
 
-    attr_cy.build(text, on_states=['A'])
-    res = attr_cy.run(samples=1000, steps=30, debug=False)
+    res = attr_cy.run(samples=1000, steps=30, debug=False, on_states=['A'])
 
     json.dump(res, open('output.json', 'w'), indent=4)
 
