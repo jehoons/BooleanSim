@@ -237,17 +237,19 @@ def gencode(text):
 
         output_str+= '    ' + strout + '\n'
 
+    # Previous version is 3sec. 
+    output_str+= '    on_idxes = [ node_list.index(s) for s in on_states]\n'
+    output_str+= '    off_idxes = [ node_list.index(s) for s in off_states]\n'
+
     output_str+= '    state_list = []\n'
     output_str+= '    state_list.append(state0)\n\n'
     output_str+= '    for i in range(steps):\n'
     output_str+= '        for k in range(num_nodes):\n'
     output_str+= '            state1[k] = eqlist[k](state0)\n'
-    output_str+= '        for k in range(num_nodes):\n'
-    output_str+= '            if node_list[k] in on_states:\n'
-    output_str+= '                state1[k] = True\n'
-    output_str+= '        for k in range(num_nodes):\n'
-    output_str+= '            if node_list[k] in off_states:\n'
-    output_str+= '                state1[k] = False\n'
+    output_str+= '        for k in on_idxes:\n'
+    output_str+= '            state1[k] = True\n'
+    output_str+= '        for k in off_idxes:\n'    
+    output_str+= '            state1[k] = False\n'
     output_str+= '        for k in range(num_nodes):\n'
     output_str+= '            state0[k] = state1[k]\n'
     output_str+= '        state_list.append(state0)\n\n'
