@@ -13,7 +13,7 @@ setup(
     license = "BSD",
     keywords = "boolean network simulator",
     url = "",
-    packages=['boolean3', 'boolean3_addon'],
+    packages=['boolean3', 'boolean3_addon', 'boolean3/plde', 'boolean3/ply'],
     long_description=read('README.md'),
     classifiers=[
         "Development Status :: 3 - Alpha",
