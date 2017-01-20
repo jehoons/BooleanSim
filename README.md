@@ -1,28 +1,19 @@
 # BooleanSim
 
-### INSTALL 
+BooleanSim은 Albert라는 사람이 개발한 이진네트워크 시뮬레이터인 [boolean2](https://github.com/ialbert/booleannet)를 python 3 에서도 실행이 가능하도록 개선한 것입니다. python 3에서 실행되도록 하기 위해 2to3.py와 [ply](http://www.dabeaz.com/ply)를 이용하였습니다.
+
+### Installation
+
 ```
 git clone git@github.com:jehoons/BooleanSim.git
 cd BooleanSim 
 python setup.py install 
 ```
 
-### ORIGINAL CODE
-Original code of `boolean2` module is developed by Albert. Original code can be downloaded by following command:
+### Test
 
-```
-git clone https://github.com/ialbert/booleannet.git
-```
+간단한 모델에 대해서 다음과 같이 시뮬레이션을 실행해 볼 수 있습니다. 
 
-As original code is excuted only from `python2`, I translated the code by using `2to3.py` and updated version of `ply`. 
-
-Ply can be downloaded from following link:
-
-http://www.dabeaz.com/ply/
-
-### TEST
-
-Test code: 
 ```python
 import pickle 
 from pdb import set_trace
@@ -45,3 +36,4 @@ def test_hello():
     for state in model.states:
         print (state.A, state.B, state.C)
 ```
+
