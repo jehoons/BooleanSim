@@ -232,3 +232,49 @@ res = attr_cy.run(samples=10000, steps=50,
 
 json.dump(res, open('test_attr_cy.json', 'w'), indent=4)
 ```
+
+위의 코드를 실행하면 다음과 같은 JSON 출력파일을 생성합니다. keyword argument, `debug=False`로 세팅하면 trajectory가 생략됩니다. trajectory를 보기 위해서는 `debug=True`로 설정해야 합니다.
+
+```json 
+{
+    "parameters": {
+        "samples": 1000000,
+        "steps": 50
+    },
+    "attractors": {
+        "7eaed65c90": {
+            "ratio": 0.750524,
+            "value": [
+                "4ae1123067",
+                "ce58123727"
+            ],
+            "count": 750524,
+            "type": "cyclic"
+        },
+        "904154d19e": {
+            "ratio": 0.12422,
+            "value": "904154d19e",
+            "count": 124220,
+            "type": "point"
+        },
+        "86f1027545": {
+            "ratio": 0.125256,
+            "value": "86f1027545",
+            "count": 125256,
+            "type": "point"
+        }
+    },
+    "state_key": {
+        "904154d19e": "100",
+        "ce58123727": "110",
+        "4ae1123067": "101",
+        "86f1027545": "111"
+    },
+    "labels": [
+        "A",
+        "B",
+        "C"
+    ],
+    "trajectory": {}
+}
+```
