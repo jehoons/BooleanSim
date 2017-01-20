@@ -71,15 +71,17 @@ def prettify(state_data, trajectory=False):
 
         return "-".join(traj_value)
 
-def main(steps=30, samples=100, debug=False):
-    
+def main(steps=30, samples=100, debug=False, progress=False, on_states=[], off_states=[]):
+
     res = {} 
     seen = {} 
     traj = {}
     
     for i in range(samples):
-        update(i, samples)                
-        values = simulate(steps=steps)        
+        if progress: 
+            update(i, samples)
+
+        values = simulate(steps=steps, on_states=on_states, off_states=off_states)
         idx, size = detect_cycles(values)
 
         if size == 1:
@@ -151,14 +153,25 @@ def gencode(text):
     init_tokens = tokenizer.init_tokens(tokens)
     update_tokens = tokenizer.update_tokens(tokens)
 
+    ic_nodes = [] 
+    for it in init_tokens:
+        ic_nodes.append( it[0].value )
+
+    update_nodes = [] 
+    for it in update_tokens:
+        update_nodes.append( it[0].value )        
+
     output_str = ''
     output_str += 'DEF num_nodes = %d\n' % len(node_list)
     output_str += 'ctypedef int (*cfptr)(int*)\n' 
     output_str += 'cdef cfptr eqlist[num_nodes]\n\n'
 
+    remainer_node_ids = [i for i in range(0, len(node_list))]
+
     for it in update_tokens: 
         strout = '' 
         idx = node_list.index( it[0].value ) 
+        remainer_node_ids.remove(idx)
         for i,el in enumerate(it): 
             if el.type=='ID':
                 if i==0:
@@ -181,14 +194,33 @@ def gencode(text):
         output_str += '    %s\n' % strout
         output_str += '    return state_%d\n\n' % idx
 
-    for i in range(len(node_list)): 
-        output_str+= 'eqlist[%d] = &__bool_fcn_%d\n' % (i,i)
+    for idx in remainer_node_ids:
+        output_str += 'cdef int __bool_fcn_%d(int state[]):\n' % idx
+        output_str += '    state_%d = state[%d]\n' % (idx, idx)
+        output_str += '    return state_%d\n\n' % idx
 
-    output_str+='cdef int state0[num_nodes]\n'
+    # output_str += 'cdef int __fixed_on(int state[]):\n'
+    # output_str += '    return True\n\n'
+    # output_str += 'cdef int __fixed_off(int state[]):\n'
+    # output_str += '    return False\n\n'
+
+    # for i in range(len(node_list)): 
+    #     if node_list[i] in on_states:
+    #         output_str+= 'eqlist[%d] = &__fixed_on\n' % (i) 
+    #     elif node_list[i] in off_states: 
+    #         output_str+= 'eqlist[%d] = &__fixed_off\n' % (i) 
+    #     else: 
+    #         output_str+= 'eqlist[%d] = &__bool_fcn_%d\n' % (i,i)    
+    for i in range(len(node_list)): 
+        output_str+= 'eqlist[%d] = &__bool_fcn_%d\n' % (i,i)            
+
+    output_str+='\ncdef int state0[num_nodes]\n'
     output_str+='cdef int state1[num_nodes]\n\n'
 
-    output_str+='def simulate(steps=10):\n'
+    output_str+='def simulate(steps=10, on_states=[], off_states=[]):\n'
+    output_str+='    node_list = %s\n' % repr(node_list)
 
+    # initial_values 
     for it in init_tokens: 
         strout = '' 
         idx = node_list.index( it[0].value ) 
@@ -205,13 +237,21 @@ def gencode(text):
 
         output_str+= '    ' + strout + '\n'
 
+    # Previous version is 3sec. 
+    output_str+= '    on_idxes = [ node_list.index(s) for s in on_states]\n'
+    output_str+= '    off_idxes = [ node_list.index(s) for s in off_states]\n'
+
     output_str+= '    state_list = []\n'
     output_str+= '    state_list.append(state0)\n\n'
     output_str+= '    for i in range(steps):\n'
     output_str+= '        for k in range(num_nodes):\n'
     output_str+= '            state1[k] = eqlist[k](state0)\n'
-    output_str+= '        for j in range(num_nodes):\n'
-    output_str+= '            state0[j] = state1[j]\n'
+    output_str+= '        for k in on_idxes:\n'
+    output_str+= '            state1[k] = True\n'
+    output_str+= '        for k in off_idxes:\n'    
+    output_str+= '            state1[k] = False\n'
+    output_str+= '        for k in range(num_nodes):\n'
+    output_str+= '            state0[k] = state1[k]\n'
     output_str+= '        state_list.append(state0)\n\n'
     output_str+= '    return state_list\n'
     
@@ -219,14 +259,23 @@ def gencode(text):
 
 def build(text):
     modelcode, node_list = gencode(text)
-    
     result = tempcode.replace('$MODELCODE$', modelcode)
     result = result.replace('$LABELS$', repr(node_list))
-
     with open('engine.pyx', 'w') as f:
         f.write(result)
-    import pyximport; pyximport.install()
+    
+    # import pyximport; pyximport.install()
 
-def run(samples=10, steps=10, debug=True): 
+def run(samples=10, steps=10, debug=True, progress=False, on_states=[], off_states=[]): 
+    
     import engine
-    return engine.main(samples=samples, steps=steps, debug=debug)
+    
+    result = engine.main(samples=samples, steps=steps, debug=debug, \
+        progress=progress, on_states=on_states, off_states=off_states)
+
+    result['parameters'] = {
+        'samples': samples,
+        'steps': steps
+        }
+
+    return result

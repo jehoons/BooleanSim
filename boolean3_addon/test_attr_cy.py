@@ -1,16 +1,24 @@
 import json
+from os.path import exists
 from boolean3_addon import attr_cy
 
-def test_this():
-    text  = '''
+def test_this_1():
+
+    modeltext = '''
     A= Random
-    B= True
-    A*= not B
-    B*= False
+    B= Random
+    C= Random
+    A*= A or C
+    B*= A and C
+    C*= not A or B
     '''
+    # if not exists('engine.pyx'):
+    attr_cy.build(modeltext)
 
-    attr_cy.build(text)
-    res = attr_cy.run(samples=100, steps=30, debug=False)
+    import pyximport; pyximport.install()
 
-    json.dump(res, open('output.json', 'w'), indent=4)
+    res = attr_cy.run(samples=1000000, steps=50, debug=False, on_states=['A'], \
+        progress=True)
+
+    json.dump(res, open('test_attr_cy.json', 'w'), indent=4)
 
