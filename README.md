@@ -204,3 +204,32 @@ json.dump(res, open(outputfile, 'w'), indent=1)
  }
 }
 ```
+
+### Test - Basin 크기 추정하기 (cython mode)
+
+또한 빠르게 베이신 크기를 추정하는 함수를 제공합니다. 단, 이 코드는 충분히 검증되지는 않은 코드이므로 실행결과를 사용하기에 앞서서 올바른 결과인지 체크할 필요가 있습니다.
+
+```python 
+import json
+from os.path import exists
+from boolean3_addon import attr_cy
+
+modeltext = '''
+A= Random
+B= Random
+C= Random
+A*= A or C
+B*= A and C
+C*= not A or B
+'''
+
+# if not exists('engine.pyx'):
+attr_cy.build(modeltext)
+
+import pyximport; pyximport.install()
+
+res = attr_cy.run(samples=10000, steps=50, 
+    debug=False, on_states=['A'], progress=True)
+
+json.dump(res, open('test_attr_cy.json', 'w'), indent=4)
+```
