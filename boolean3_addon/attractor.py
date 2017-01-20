@@ -56,7 +56,7 @@ def find_attractors(model=None, steps=30, mode='sync', sample_size=1000, show_pr
         seen [str(key)] = {
             'index':index,
             'size':size,
-            'trajectory': values,
+            'trajectory': "".join(['%d' % v for v in values]),
             'type': attr_type,
             'initial': values[0],
             'attractor': attr_id

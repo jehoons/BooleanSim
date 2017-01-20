@@ -41,27 +41,166 @@ def test_hello():
 
 ### Test - Basin크기 추정하기 
 
+boolean3_addon 모듈에서는 boolean network의 basin 크기를 추정할수 있는 `find_attractors` 함수를 지원합니다. 다음과 같이 실행해 봅시다:
+
 ```python 
 import json
 from ipdb import set_trace
 from boolean3 import Model
 from boolean3_addon import attractor
 
-def test_find_attractors():
-    text = """
-    A = True
-    B = Random
-    C = Random
-    D = Random
+text = """
+A = True
+B = Random
+C = Random
+D = Random
 
-    B* = A or C
-    C* = A and not D
-    D* = B and C
-    """
+B* = A or C
+C* = A and not D
+D* = B and C
+"""
 
-    model = Model( text=text, mode='sync')
-    res = attractor.find_attractors(model=model, steps=100, sample_size=10)
+model = Model( text=text, mode='sync')
+res = attractor.find_attractors(model=model, steps=10, sample_size=100)
 
-    outputfile = 'output.json'
-    json.dump(res, open(outputfile, 'w'), indent=1)
+outputfile = 'output.json'
+json.dump(res, open(outputfile, 'w'), indent=1)
+```
+
+계산된 베이신에 관한 정보는 다음과 같이 계산이 될 것입니다:
+
+```json
+{
+ "fingerprint_map_keys": [
+  "A",
+  "B",
+  "C",
+  "D"
+ ],
+ "cyclic_attractor_info": {
+  "8db3eaf0539d9f77d663": "4123"
+ },
+ "fingerprint_map": {
+  "2": [
+   true,
+   true,
+   true,
+   false
+  ],
+  "7": [
+   true,
+   false,
+   false,
+   false
+  ],
+  "0": [
+   true,
+   false,
+   false,
+   true
+  ],
+  "5": [
+   true,
+   false,
+   true,
+   false
+  ],
+  "6": [
+   true,
+   false,
+   true,
+   true
+  ],
+  "4": [
+   true,
+   true,
+   false,
+   true
+  ],
+  "3": [
+   true,
+   true,
+   true,
+   true
+  ],
+  "1": [
+   true,
+   true,
+   false,
+   false
+  ]
+ },
+ "attractor_info": {
+  "8db3eaf0539d9f77d663": "cyclic"
+ },
+ "attractors": {
+  "2": {
+   "type": "cyclic",
+   "initial": 2,
+   "attractor": "4a5b0b3fd8eb9a324e8a",
+   "size": 4,
+   "index": 0,
+   "trajectory": "2341234123"
+  },
+  "7": {
+   "type": "cyclic",
+   "initial": 7,
+   "attractor": "4a5b0b3fd8eb9a324e8a",
+   "size": 4,
+   "index": 1,
+   "trajectory": "7234123412"
+  },
+  "0": {
+   "type": "cyclic",
+   "initial": 0,
+   "attractor": "4a5b0b3fd8eb9a324e8a",
+   "size": 4,
+   "index": 1,
+   "trajectory": "0123412341"
+  },
+  "5": {
+   "type": "cyclic",
+   "initial": 5,
+   "attractor": "4a5b0b3fd8eb9a324e8a",
+   "size": 4,
+   "index": 1,
+   "trajectory": "5234123412"
+  },
+  "6": {
+   "type": "cyclic",
+   "initial": 6,
+   "attractor": "4a5b0b3fd8eb9a324e8a",
+   "size": 4,
+   "index": 1,
+   "trajectory": "6123412341"
+  },
+  "1": {
+   "type": "cyclic",
+   "initial": 1,
+   "attractor": "4a5b0b3fd8eb9a324e8a",
+   "size": 4,
+   "index": 0,
+   "trajectory": "1234123412"
+  },
+  "3": {
+   "type": "cyclic",
+   "initial": 3,
+   "attractor": "4a5b0b3fd8eb9a324e8a",
+   "size": 4,
+   "index": 0,
+   "trajectory": "3412341234"
+  },
+  "4": {
+   "type": "cyclic",
+   "initial": 4,
+   "attractor": "4a5b0b3fd8eb9a324e8a",
+   "size": 4,
+   "index": 0,
+   "trajectory": "4123412341"
+  }
+ },
+ "basin_of_attraction": {
+  "8db3eaf0539d9f77d663": 8
+ }
+}
 ```
