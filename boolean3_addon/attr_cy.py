@@ -8,8 +8,11 @@ import os, sys
 import time
 from ipdb import set_trace
 from itertools import combinations, combinations_with_replacement
+from cython.parallel import parallel, prange
+from libc.stdlib cimport abort, malloc, free
 import hashlib
 import json
+
 
 __start_time = 0
 
@@ -47,11 +50,9 @@ def prettify(state_data, trajectory=False):
         return "-".join(traj_value)
 
 def main(steps, samples, debug, on_states, off_states):
-
-    res = {} 
-    seen = {} 
-    traj = {}
-    
+    res = {}
+    seen = {}
+    traj = {}    
     for i in range(samples):
         values = simulate(steps=steps, on_states=on_states, off_states=off_states)
         idx, size = detect_cycles(values)
@@ -132,14 +133,26 @@ def gencode(text, weighted_sum=False):
     update_nodes = [] 
     for it in update_tokens:
         update_nodes.append( it[0].value )        
-
+    
+    not_in_ic = [x for x in set(node_list) - set(ic_nodes)]
+    not_in_update = [x for x in set(node_list) - set(update_nodes)]
+    
     node_info = {
         'update_nodes': update_nodes,  
         'ic_nodes': ic_nodes, 
         'all_nodes': node_list,
-        'not-in-ic': [x for x in set(node_list) - set(ic_nodes)],
-        'not-in-update': [x for x in set(node_list) - set(update_nodes)],
-        }         
+        'not-in-ic': not_in_ic,
+        'not-in-update': not_in_update,
+        }
+        
+    if not_in_ic != []: 
+        print('nodes not initialized:')
+        print(not_in_ic)
+        assert False
+
+    if not_in_update != []: 
+        print('nodes not updated:')
+        print(not_in_update)
 
     output_str = ''
     output_str += 'DEF num_nodes = %d\n' % len(node_list)
@@ -169,7 +182,12 @@ def gencode(text, weighted_sum=False):
                 strout += el.value
             elif el.type == 'ASSIGN':
                 continue
-            else: 
+            elif el.type == 'NUMBER':
+                if el.value >= 0.0: 
+                    strout += 'True'
+                else: 
+                    strout += 'False'
+            else:
                 strout += el.value
         
         output_str += 'cdef int __bool_fcn_%d(int state[]):\n' % idx
@@ -213,13 +231,13 @@ def gencode(text, weighted_sum=False):
 
     output_str+= '    state_list = []\n'
     output_str+= '    state_list.append(state0)\n\n'
-    output_str+= '    for i in range(steps):\n'
-    output_str+= '        for k in range(num_nodes):\n'
-    output_str+= '            state1[k] = eqlist[k](state0)\n'
+    output_str+= '    for i in range(steps):\n'    
     output_str+= '        for k in on_idxes:\n'
     output_str+= '            state1[k] = True\n'
     output_str+= '        for k in off_idxes:\n'    
     output_str+= '            state1[k] = False\n'
+    output_str+= '        for k in range(num_nodes):\n'
+    output_str+= '            state1[k] = eqlist[k](state0)\n'
     output_str+= '        for k in range(num_nodes):\n'
     output_str+= '            state0[k] = state1[k]\n'
     output_str+= '        state_list.append(state0)\n\n'
@@ -306,7 +324,6 @@ def gencode_ws(text, weighted_sum=False):
         
         it_types = [it0.type for it0 in it]        
 
-
         output_str += 'cdef int __bool_fcn_%d(int state[]):\n' % idx        
         output_str += '    # %s\n' % repr(it)        
         output_str += '    %s\n' % strout
@@ -330,7 +347,7 @@ def gencode_ws(text, weighted_sum=False):
     output_str+='def simulate(steps=10, on_states=[], off_states=[]):\n'
     output_str+='    node_list = %s\n' % repr(node_list)
 
-    # initial_values 
+    # # initial_values 
     for it in init_tokens: 
         strout = '' 
         idx = node_list.index( it[0].value ) 
@@ -344,8 +361,20 @@ def gencode_ws(text, weighted_sum=False):
                     strout += el.value
             else: 
                 strout += el.value
-
         output_str+= '    ' + strout + '\n'
+
+    # output_str+= '    for node in node_list:\n'
+    # output_str+= '        if initial_condition[node] == \'True\':\n'
+    # output_str+= '            idx = node_list.index(node)\n'
+    # output_str+= '            state0[idx] = True\n'
+    # output_str+= '        elif initial_condition[node] == \'False\':\n'
+    # output_str+= '            idx = node_list.index(node)\n'
+    # output_str+= '            state0[idx] = False\n'
+    # output_str+= '        elif initial_condition[node] == \'Random\':\n'
+    # output_str+= '            idx = node_list.index(node)\n'
+    # output_str+= '            state0[idx] = random()>0.5\n'
+    # output_str+= '        else:\n'
+    # output_str+= '            assert False\n'
 
     # Previous version is 3sec. 
     output_str+= '    on_idxes = [ node_list.index(s) for s in on_states]\n'
@@ -389,3 +418,4 @@ def run(samples=10, steps=10, debug=True, on_states=[], off_states=[]):
         'steps': steps
         }
     return result
+
