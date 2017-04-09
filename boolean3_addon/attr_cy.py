@@ -1,4 +1,4 @@
-from boolean3 import tokenizer
+from boolean3 import tokenizer,tokenizer_ws
 from ipdb import set_trace
 from os.path import basename,dirname
 
@@ -14,31 +14,6 @@ import json
 __start_time = 0
 
 FP_LENGTH = 10
-
-def update(idx, max_idx, updates=1000, blocks=20):    
-    global __start_time
-    idx += 1
-    if idx == 1:
-        __start_time = time.time()
-    elapsed_time = time.time() - __start_time
-    avgtime = elapsed_time / idx;
-    remaintime = (max_idx - idx)*avgtime
-    if idx>max_idx:
-        idx = max_idx
-    # updates = 1000
-    if max_idx < updates:
-        updates = max_idx
-    sys.stdout.flush()
-    # blocks = 50
-    if idx % (max_idx/updates) == 0 or (idx == max_idx):
-        p = float(idx)/float(max_idx)
-        s = '\\r[%s] %.02f%% (%.01fs)' % ('#'*int(p*blocks), p*100.0, remaintime)
-        sys.stdout.write(s)
-        sys.stdout.flush()
-
-    if idx == max_idx:
-        sys.stdout.write('\\n')
-        sys.stdout.flush()
 
 cdef detect_cycles( data ):
     fsize   = len(data)
@@ -71,16 +46,13 @@ def prettify(state_data, trajectory=False):
 
         return "-".join(traj_value)
 
-def main(steps=30, samples=100, debug=False, progress=False, on_states=[], off_states=[]):
+def main(steps, samples, debug, on_states, off_states):
 
     res = {} 
     seen = {} 
     traj = {}
     
     for i in range(samples):
-        if progress: 
-            update(i, samples)
-
         values = simulate(steps=steps, on_states=on_states, off_states=off_states)
         idx, size = detect_cycles(values)
 
@@ -144,7 +116,7 @@ def main(steps=30, samples=100, debug=False, progress=False, on_states=[], off_s
     return result
 """
 
-def gencode(text):
+def gencode(text, weighted_sum=False):
 
     lexer = tokenizer.Lexer() 
     tokens = lexer.tokenize_text( text )
@@ -160,6 +132,14 @@ def gencode(text):
     update_nodes = [] 
     for it in update_tokens:
         update_nodes.append( it[0].value )        
+
+    node_info = {
+        'update_nodes': update_nodes,  
+        'ic_nodes': ic_nodes, 
+        'all_nodes': node_list,
+        'not-in-ic': [x for x in set(node_list) - set(ic_nodes)],
+        'not-in-update': [x for x in set(node_list) - set(update_nodes)],
+        }         
 
     output_str = ''
     output_str += 'DEF num_nodes = %d\n' % len(node_list)
@@ -185,6 +165,8 @@ def gencode(text):
                     strout += el.value
             elif el.type == 'AND' or el.type == 'OR' or el.type == 'NOT':
                 strout += ' '+el.value+' '
+            elif el.type == 'LPAREN' or el.type == 'RPAREN':
+                strout += el.value
             elif el.type == 'ASSIGN':
                 continue
             else: 
@@ -198,19 +180,7 @@ def gencode(text):
         output_str += 'cdef int __bool_fcn_%d(int state[]):\n' % idx
         output_str += '    state_%d = state[%d]\n' % (idx, idx)
         output_str += '    return state_%d\n\n' % idx
-
-    # output_str += 'cdef int __fixed_on(int state[]):\n'
-    # output_str += '    return True\n\n'
-    # output_str += 'cdef int __fixed_off(int state[]):\n'
-    # output_str += '    return False\n\n'
-
-    # for i in range(len(node_list)): 
-    #     if node_list[i] in on_states:
-    #         output_str+= 'eqlist[%d] = &__fixed_on\n' % (i) 
-    #     elif node_list[i] in off_states: 
-    #         output_str+= 'eqlist[%d] = &__fixed_off\n' % (i) 
-    #     else: 
-    #         output_str+= 'eqlist[%d] = &__bool_fcn_%d\n' % (i,i)    
+ 
     for i in range(len(node_list)): 
         output_str+= 'eqlist[%d] = &__bool_fcn_%d\n' % (i,i)            
 
@@ -257,25 +227,165 @@ def gencode(text):
     
     return output_str, node_list
 
-def build(text):
-    modelcode, node_list = gencode(text)
+def gencode_ws(text, weighted_sum=False):
+
+    lexer = tokenizer_ws.Lexer() 
+    tokens = lexer.tokenize_text( text )
+    node_list = sorted(list( tokenizer_ws.get_nodes(tokens) ))
+
+    init_tokens = tokenizer_ws.init_tokens(tokens)
+    update_tokens = tokenizer_ws.update_tokens(tokens)
+
+    ic_nodes = [] 
+    for it in init_tokens:
+        ic_nodes.append( it[0].value )
+
+    update_nodes = [] 
+    for it in update_tokens:
+        update_nodes.append( it[0].value )
+
+    not_in_ic = [x for x in set(node_list) - set(ic_nodes)]
+    not_in_update = [x for x in set(node_list) - set(update_nodes)]
+
+    node_info = {
+        'update_nodes': update_nodes,  
+        'ic_nodes': ic_nodes, 
+        'all_nodes': node_list,
+        'not-in-ic': not_in_ic,
+        'not-in-update': not_in_update,
+        }
+        
+    if not_in_ic != []: 
+        print('nodes not initialized:')
+        print(not_in_ic)
+        assert False
+
+    if not_in_update != []: 
+        print('nodes not updated:')
+        print(not_in_update)
+
+    output_str = ''
+    output_str = 'sign = lambda x: True if x > 0 else False\n'
+    output_str += 'DEF num_nodes = %d\n' % len(node_list)
+    output_str += 'ctypedef int (*cfptr)(int*)\n' 
+    output_str += 'cdef cfptr eqlist[num_nodes]\n\n'
+
+    remainer_node_ids = [i for i in range(0, len(node_list))]
+
+    for it in update_tokens: 
+        strout = '' 
+        idx = node_list.index( it[0].value ) 
+        remainer_node_ids.remove(idx)
+        # set_trace()
+        for i,el in enumerate(it): 
+            if el.type=='ID':
+                if i==0:
+                    strout += 'state_%d'%node_list.index( el.value ) 
+                else: 
+                    strout += 'state[%d]'%node_list.index( el.value ) 
+            elif el.type=='STATE': 
+                if el.value=='Random':
+                    strout += 'random()>0.5'
+                else: 
+                    strout += el.value
+            elif el.type == 'PLUS' or el.type == 'MINUS' or el.type == 'TIMES':
+                strout += el.value
+            elif el.type == 'ASSIGN':
+                strout += '='
+            elif el.type == 'NUMBER':
+                if el.value >= 0: 
+                    strout += '+%f' % el.value
+                else: 
+                    strout += '%f' % el.value
+            elif el.type == 'LPAREN' or el.type == 'RPAREN':
+                strout += el.value
+            elif el.type == 'SIGN':
+                strout += el.value
+            else: 
+                strout += el.value
+        
+        it_types = [it0.type for it0 in it]        
+
+
+        output_str += 'cdef int __bool_fcn_%d(int state[]):\n' % idx        
+        output_str += '    # %s\n' % repr(it)        
+        output_str += '    %s\n' % strout
+
+        if 'SIGN' not in it_types:
+            output_str += '    return sign(state_%d)\n\n' % idx
+        else: 
+            output_str += '    return state_%d\n\n' % idx
+
+    for idx in remainer_node_ids:
+        output_str += 'cdef int __bool_fcn_%d(int state[]):\n' % idx
+        output_str += '    state_%d = sign(state[%d])\n' % (idx, idx)
+        output_str += '    return state_%d\n\n' % idx
+ 
+    for i in range(len(node_list)): 
+        output_str+= 'eqlist[%d] = &__bool_fcn_%d\n' % (i,i)            
+
+    output_str+='\ncdef int state0[num_nodes]\n'
+    output_str+='cdef int state1[num_nodes]\n\n'
+
+    output_str+='def simulate(steps=10, on_states=[], off_states=[]):\n'
+    output_str+='    node_list = %s\n' % repr(node_list)
+
+    # initial_values 
+    for it in init_tokens: 
+        strout = '' 
+        idx = node_list.index( it[0].value ) 
+        for el in it: 
+            if el.type=='ID':
+                strout += 'state0[%d]'%node_list.index( el.value ) 
+            elif el.type=='STATE': 
+                if el.value=='Random':
+                    strout += 'random()>0.5'
+                else: 
+                    strout += el.value
+            else: 
+                strout += el.value
+
+        output_str+= '    ' + strout + '\n'
+
+    # Previous version is 3sec. 
+    output_str+= '    on_idxes = [ node_list.index(s) for s in on_states]\n'
+    output_str+= '    off_idxes = [ node_list.index(s) for s in off_states]\n'
+
+    output_str+= '    state_list = []\n'
+    output_str+= '    state_list.append(state0)\n\n'
+    output_str+= '    for i in range(steps):\n'
+    output_str+= '        for k in range(num_nodes):\n'
+    output_str+= '            state1[k] = eqlist[k](state0)\n'
+    output_str+= '        for k in on_idxes:\n'
+    output_str+= '            state1[k] = True\n'
+    output_str+= '        for k in off_idxes:\n'    
+    output_str+= '            state1[k] = False\n'
+    output_str+= '        for k in range(num_nodes):\n'
+    output_str+= '            state0[k] = state1[k]\n'
+    output_str+= '        state_list.append(state0)\n\n'
+    output_str+= '    return state_list\n'
+    
+    return output_str, node_list
+
+
+def build(text, weighted_sum=False):
+
+    if weighted_sum == False: 
+        modelcode, node_list = gencode(text)
+    else: 
+        modelcode, node_list = gencode_ws(text)
+
     result = tempcode.replace('$MODELCODE$', modelcode)
     result = result.replace('$LABELS$', repr(node_list))
     with open('engine.pyx', 'w') as f:
         f.write(result)
-    
-    # import pyximport; pyximport.install()
 
-def run(samples=10, steps=10, debug=True, progress=False, on_states=[], off_states=[]): 
-    
-    import engine
-    
-    result = engine.main(samples=samples, steps=steps, debug=debug, \
-        progress=progress, on_states=on_states, off_states=off_states)
 
+def run(samples=10, steps=10, debug=True, on_states=[], off_states=[]): 
+    import engine    
+    result = engine.main(steps, samples, debug, on_states, off_states)
     result['parameters'] = {
         'samples': samples,
         'steps': steps
         }
-
     return result
