@@ -1,6 +1,7 @@
 from boolean3 import tokenizer,tokenizer_ws
 from ipdb import set_trace
 from os.path import basename,dirname
+import numpy as np
 
 tempcode="""
 from numpy.random import random
@@ -117,7 +118,7 @@ def main(steps, samples, debug, on_states, off_states):
     return result
 """
 
-def gencode(text, weighted_sum=False):
+def gencode(text):
 
     lexer = tokenizer.Lexer() 
     tokens = lexer.tokenize_text( text )
@@ -245,7 +246,7 @@ def gencode(text, weighted_sum=False):
     
     return output_str, node_list
 
-def gencode_ws(text, weighted_sum=False):
+def gencode_ws(text):
 
     lexer = tokenizer_ws.Lexer() 
     tokens = lexer.tokenize_text( text )
@@ -397,7 +398,7 @@ def gencode_ws(text, weighted_sum=False):
     return output_str, node_list
 
 
-def build(text, weighted_sum=False):
+def build(text, pyx='engine.pyx', weighted_sum=False):
 
     if weighted_sum == False: 
         modelcode, node_list = gencode(text)
@@ -406,16 +407,61 @@ def build(text, weighted_sum=False):
 
     result = tempcode.replace('$MODELCODE$', modelcode)
     result = result.replace('$LABELS$', repr(node_list))
-    with open('engine.pyx', 'w') as f:
+    with open(pyx, 'w') as f:
         f.write(result)
 
 
-def run(samples=10, steps=10, debug=True, on_states=[], off_states=[]): 
-    import engine    
-    result = engine.main(steps, samples, debug, on_states, off_states)
-    result['parameters'] = {
-        'samples': samples,
-        'steps': steps
+def parallel(pyxengine, steps=100, samples=1000, repeats=10, on_states=[], off_states=[]):
+    ''' trajectories would not be correct '''    
+    from multiprocessing import Pool,cpu_count
+
+    p = Pool(cpu_count())
+
+    args = (steps, samples, False, on_states, off_states)
+    
+    args_list = []
+    
+    for i in range(repeats):
+        args_list.append(args)
+
+    results = p.starmap(pyxengine.main, args_list)
+    
+    p.close(); p.join()
+
+    reduced = {'attractors':{}, 'labels':{}, 'trajectory':{}, 'state_key':{}}
+
+    for res in results:
+        for att in res['attractors']: 
+            if att not in reduced['attractors']: 
+                reduced['attractors'][att] = res['attractors'][att]
+            else: 
+                reduced['attractors'][att]['count'] += res['attractors'][att]['count']
+
+    reduced['labels'] = results[0]['labels']
+    reduced['trajectory'] = results[0]['trajectory']
+    reduced['state_key'] = results[0]['state_key']
+    
+    count = [reduced['attractors'][att]['count'] \
+            for att in reduced['attractors']]
+
+    for att in reduced['attractors']: 
+        reduced['attractors'][att]['ratio'] =  \
+            reduced['attractors'][att]['count']/np.sum(count)
+            
+    reduced['parameters'] = {
+        'samples': int(np.sum(count)),
+        'steps': steps, 
         }
-    return result
+
+    return reduced
+
+
+# def run(samples=10, steps=10, debug=True, on_states=[], off_states=[]): 
+#     import engine    
+#     result = engine.main(steps, samples, debug, on_states, off_states)
+#     result['parameters'] = {
+#         'samples': samples,
+#         'steps': steps
+#         }
+#     return result
 
