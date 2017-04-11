@@ -50,7 +50,7 @@ def prettify(state_data, trajectory=False):
 
         return "-".join(traj_value)
 
-def main(steps, samples, debug, on_states, off_states):
+def main(steps=50, samples=100, debug=False, on_states=[], off_states=[]):
     res = {}
     seen = {}
     traj = {}    

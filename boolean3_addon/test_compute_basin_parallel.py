@@ -14,12 +14,12 @@ def test_this():
     B*= sign(A + B + 2*C - 1)
     C*= sign(A + B - C)
     '''
-    
+
     attr_cy.build(modeltext, pyx='engine_ws.pyx', weighted_sum=True)
     import pyximport; pyximport.install()
     import engine_ws
 
-    res = attr_cy.parallel(engine_ws, steps=100, samples=1000, repeats=1000, \
+    res = attr_cy.parallel(engine_ws, steps=100, samples=10000, repeats=1000, \
             on_states=[], off_states=[])
 
     json.dump(res, open('res_compute_basin_parallel.json', 'w'), indent=4)
