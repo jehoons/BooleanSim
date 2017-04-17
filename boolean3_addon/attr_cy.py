@@ -411,11 +411,14 @@ def build(text, pyx='engine.pyx', weighted_sum=False):
         f.write(result)
 
 
-def parallel(pyxengine, steps=100, samples=1000, repeats=10, on_states=[], off_states=[]):
+def parallel(pyxengine, steps=100, samples=1000, repeats=10, ncpus=3, on_states=[], off_states=[]):
     ''' trajectories would not be correct '''    
     from multiprocessing import Pool,cpu_count
 
-    p = Pool(cpu_count())
+    if ncpus == 0 : 
+        p = Pool(cpu_count())
+    else: 
+        p = Pool(ncpus)
 
     args = (steps, samples, False, on_states, off_states)
     
@@ -437,9 +440,12 @@ def parallel(pyxengine, steps=100, samples=1000, repeats=10, on_states=[], off_s
             else: 
                 reduced['attractors'][att]['count'] += res['attractors'][att]['count']
 
+
+        for key in res['state_key']:
+            reduced['state_key'][key] = res['state_key'][key]
+
     reduced['labels'] = results[0]['labels']
     reduced['trajectory'] = results[0]['trajectory']
-    reduced['state_key'] = results[0]['state_key']
     
     count = [reduced['attractors'][att]['count'] \
             for att in reduced['attractors']]

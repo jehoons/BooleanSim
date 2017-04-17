@@ -1,8 +1,8 @@
 # BooleanSim
 
-BooleanSim은 Albert라는 사람이 개발한 이진네트워크 시뮬레이터인 [boolean2](https://github.com/ialbert/booleannet)를 python 3에서도 실행이 가능하도록 개선하고 몇개의 편리한 기능을 추가한 것입니다. python 3에서 실행되도록 하기 위해 [2to3.py](https://docs.python.org/3.0/library/2to3.html)와 [ply](http://www.dabeaz.com/ply)를 이용하였습니다.
+BooleanSim은 boolean network simulation program입니다. 이것은  [boolean2](https://github.com/ialbert/booleannet)에 기반하여 개발되었습니다. 
 
-BooleanSim은 boolean3와 boolean3_addon 모듈로 구성됩니다. boolean3는 Albert의 시뮬레이터와 동일하며 boolean3_addon에서는 boolean network의 basin크기를 추정하는 기능이 포함되어 있습니다.
+BooleanSim은 boolean3와 boolean3_addon 모듈로 구성됩니다. BooleanSim은 boolean network를 시뮬레이션하고 그 어트랙터, 베이신 비율을 계산해 줍니다.
 
 ### Installation
 
@@ -309,3 +309,4 @@ def test_this():
     json.dump(res, open('res_compute_basin_parallel.json', 'w'), indent=4)
 
 ```
+

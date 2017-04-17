@@ -142,7 +142,7 @@ def run(txtdata, short=False):
                     output_str += '# '+lhs_ + ' | ' + str(y[j]) + '\n'
 
             else:  
-                output_str += 'N/A' + '\n'
+                output_str += '# N/A' + '\n'
 
             output_str += '# SOP: ' + words[0] + ' *= ' + sop_eqns + '\n'
             output_str += words[0] + ' *= ' + res1 + '\n'
