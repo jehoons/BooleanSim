@@ -10,6 +10,11 @@ BooleanSim은 boolean3와 boolean3_addon 모듈로 구성됩니다. BooleanSim�
 git clone git@github.com:jehoons/BooleanSim.git
 cd BooleanSim 
 python setup.py install 
+
+or
+
+pip install -U git+https://github.com/jehoons/BooleanSim
+
 ```
 
 ### Test - Hello 
