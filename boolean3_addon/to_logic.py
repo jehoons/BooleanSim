@@ -43,12 +43,12 @@ def compute_truth_table(rule, tt, variables):
             set_trace()
 
         try:
-            y = eval(rule)
+            __y = eval(rule)
         except: 
             print('error in ', rule)
             assert False 
             
-        output_list.append(str(y))
+        output_list.append(str(__y))
 
     return output_list
 
